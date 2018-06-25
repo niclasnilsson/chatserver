@@ -82,16 +82,33 @@ COMMANDS = {
 }
 
 
+def fetch_to_newline(socket):
+    data = b''
+    while True:
+        part = socket.recv(64)
+        if not part:
+            return data
+        data += part
+        if part[-1] == b'\n' or part[-2:] == b'\r\n':
+            return data
+
+
 def _handle(state):
     socket = state['socket']
     socket.send("hej {}\n".format(state['name']).encode("utf-8"))
     while(True):
 
-        data = socket.recv(1024)
+        # data = socket.recv(64)
+        data = fetch_to_newline(socket)
         print("raw:")
         print(data)
         
-        data = data.decode("utf-8").strip()
+        try:
+            data = data.decode("utf-8").strip()
+        except:
+            socket.send("got strange data from you".encode('utf-8'))
+            socket.send('\n'.encode('utf-8'))
+            continue
         if not data:
             print(data)
             break
@@ -126,6 +143,7 @@ def handle(socket, address):
         _handle(state)
     except Exception as e:
         print("got exception when handle client {}: {}".format(name, e))
+    #_handle(state)
 
     STATE['clients'].pop(address)
 
